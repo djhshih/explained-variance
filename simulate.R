@@ -26,6 +26,29 @@ fev.true <- 1 - sigma^2 / var(mu);
 
 X <- matrix(c(x1, x2), ncol=2);
 
+# fit linear regression
+
+fit <- lm(x2 ~ x1);
+d <- data.frame(x1=x1);
+x2.hat <- predict(fit, d, se.fit=TRUE, type="response");
+
+plot(X[,1], X[,2])
+idx <- order(x1);
+lines(x1[idx], x2.hat$fit[idx], pch=20)
+# confidence band
+z <- qnorm(1 - 0.05/2);
+lines(x1[idx], x2.hat$fit[idx] - z*x2.hat$se.fit[idx], pch=20)
+lines(x1[idx], x2.hat$fit[idx] + z*x2.hat$se.fit[idx], pch=20)
+
+x2.ci <- predict(fit, d, interval="confidence");
+lines(x1[idx], x2.ci[idx, 2], col="blue")
+lines(x1[idx], x2.ci[idx, 3], col="blue")
+
+x2.ci <- predict(fit, d, interval="prediction");
+lines(x1[idx], x2.ci[idx, 2], col="grey30")
+lines(x1[idx], x2.ci[idx, 3], col="grey30")
+
+
 # fit loess regression
 
 fit <- loess(x2 ~ x1);
@@ -44,8 +67,7 @@ print(fev.hat)
 
 k <- 5;
 fit <- scam(x2 ~ s(x1, k = k, bs = "mpi"));
-d <- data.frame(x1=x1);
-x2.hat <- predict(fit, se.fit=TRUE, d);
+x2.hat <- predict(fit, se.fit=TRUE, type="response", d);
 
 plot(X[,1], X[,2])
 idx <- order(x1);
