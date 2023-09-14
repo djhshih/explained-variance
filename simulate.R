@@ -67,15 +67,36 @@ print(fev.hat)
 
 k <- 5;
 fit <- scam(x2 ~ s(x1, k = k, bs = "mpi"));
-x2.hat <- predict(fit, se.fit=TRUE, type="response", d);
+
+# predict mean with prediction interval for new data
+predict_interval_scam <- function(fit, newdata, level=0.95) {
+	y.hat <- predict(fit, se.fit=TRUE, type="response", newdata);
+
+	# sigma2.hat is based on old data (1..N)
+	nu <- length(fit$residuals) - length(coef(fit));
+	sigma2.hat <- 1 / nu * sum( fit$residuals^2 );
+
+	# \sqrt( \hat{ var[w] } ) = 
+	#   \sqrt( \hat{ var[y_{N+1}] } + \hat{ var[\hat{y_{N+1}}] }
+	sqrt_hat_var_w <- sqrt(sigma2.hat + y.hat$se.fit^2);
+	
+	tq <- qt(1 - (1 - level)/2, df=nu);
+	se <- tq*sqrt_hat_var_w;
+	data.frame(
+		fit = y.hat$fit,
+		lwr = y.hat$fit - se,
+		upr = y.hat$fit + se
+	)
+}
+
+x2.hat <- predict_interval_scam(fit, d);
 
 plot(X[,1], X[,2])
 idx <- order(x1);
 lines(x1[idx], x2.hat$fit[idx], pch=20)
 # confidence band
-z <- qnorm(1 - 0.05/2);
-lines(x1[idx], x2.hat$fit[idx] - z*x2.hat$se.fit[idx], pch=20)
-lines(x1[idx], x2.hat$fit[idx] + z*x2.hat$se.fit[idx], pch=20)
+lines(x1[idx], x2.hat$lwr[idx], pch=20)
+lines(x1[idx], x2.hat$upr[idx], pch=20)
 
 fev.hat <- fev(x2, x2.hat$fit);
 
